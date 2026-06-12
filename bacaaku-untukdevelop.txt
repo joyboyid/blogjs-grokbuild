@@ -1,0 +1,337 @@
+================================================================================
+                    BACA AKU UNTUK MENGEMBANGKAN BLOGJS
+                          Catatan Lengkap Development
+================================================================================
+
+Tanggal Pembuatan Catatan: 2026-06-12
+Project: BlogJS - Simple Blog dengan Role Admin & Author
+Lokasi: /home/shiroe/project/grok-app/blogjs
+
+================================================================================
+1. OVERVIEW PROYEK
+================================================================================
+
+BlogJS adalah aplikasi blog sederhana tapi lengkap yang dibangun menggunakan:
+- Backend: Node.js + Express.js
+- Database: MariaDB (dengan mysql2 Promise)
+- Template: EJS
+- Frontend: Bootstrap 5 (responsive)
+- Autentikasi: express-session + bcryptjs
+- Role System: Admin (full access) & Author (hanya bisa manage post sendiri)
+
+Fitur Utama:
+- Public: Home dengan pagination, detail post, filter kategori, "Created by"
+- Auth: Login (public), Register dinonaktifkan (hanya admin yang bisa create user)
+- Admin Area (role-based):
+  - Admin: Full CRUD posts + categories + users
+  - Author: Hanya CRUD post milik sendiri (My Posts)
+- Navbar & UI disesuaikan per role (Dashboard Author vs BlogJS Admin)
+- Setiap post menampilkan "Created by: Nama Author/Admin"
+- Ownership: Post memiliki user_id, author hanya bisa edit/delete post sendiri
+
+Tujuan Proyek: Belajar full-stack development dengan role-based access control (RBAC),
+ownership pada konten, dan UI yang berbeda per role.
+
+================================================================================
+2. TECH STACK & DEPENDENCIES
+================================================================================
+
+Core:
+- express, ejs, mysql2, express-session, express-mysql-session
+- bcryptjs, dotenv, express-validator, multer, slugify, connect-flash
+
+Dev:
+- nodemon
+
+Database:
+- MariaDB (bukan MySQL murni, tapi kompatibel)
+- Nama DB: db_blogjs
+
+Penting:
+- Tidak menggunakan express-ejs-layouts (semua halaman admin/public adalah full HTML standalone)
+- Tidak ada public registration lagi (hanya admin yang bisa buat user baru)
+- Middleware role: requireAdmin, requireAuthorOrAdmin, requireLogin
+
+================================================================================
+3. CARA SETUP & MENJALANKAN (STEP BY STEP)
+================================================================================
+
+1. Clone / masuk ke folder project
+   cd /home/shiroe/project/grok-app/blogjs
+
+2. Install dependencies
+   npm install
+
+3. Setup Database
+   - Pastikan MariaDB berjalan
+   - Buat database:
+     mysql -u root -p -e "CREATE DATABASE db_blogjs CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+   - Import schema (WAJIB, karena ada perubahan user_id & role):
+     mysql -u root -p db_blogjs < database.sql
+
+   Catatan penting tentang database.sql:
+   - Sudah include kolom user_id di posts
+   - Role ENUM('admin', 'author')
+   - Ada sample admin + author + sample posts dengan owner
+
+4. Buat file .env (copy dari .env.example)
+   cp .env.example .env
+   Edit .env:
+   DB_HOST=localhost
+   DB_PORT=3306
+   DB_USER=root
+   DB_PASSWORD=yourpassword
+   DB_NAME=db_blogjs
+   SESSION_SECRET=rahasia_sangat_panjang_dan_random
+   PORT=3000
+
+5. Jalankan
+   npm run dev   (development dengan nodemon)
+   atau
+   npm start
+
+6. Akses
+   - Public: http://localhost:3000
+   - Login: http://localhost:3000/auth/login
+   - Default Admin: admin@blogjs.local / admin123
+   - Sample Author: author@blogjs.local / author123
+
+Setelah pertama kali login sebagai admin:
+- Segera ganti password via database atau tambahkan fitur change password.
+- Buat user Author baru via /admin/users/create
+
+================================================================================
+4. STRUKTUR FOLDER & ARSITEKTUR
+================================================================================
+
+blogjs/
+├── config/
+│   └── db.js                 # MariaDB connection pool (mysql2/promise)
+├── controllers/
+│   ├── adminController.js    # Dashboard, users management
+│   ├── authController.js     # Login (register dinonaktifkan)
+│   ├── categoryController.js # CRUD kategori (admin only)
+│   └── postController.js     # CRUD post + My Posts + ownership check
+├── middleware/
+│   ├── auth.js               # requireLogin, requireAdmin, requireAuthorOrAdmin, redirectIfAuthenticated
+│   └── flash.js              # setLocals (user, currentPath, flash messages)
+├── models/
+│   ├── Category.js
+│   ├── Post.js               # Termasuk getByUserId, getAllForAdmin, ownership logic
+│   └── User.js               # getAll, create (dengan hashing), delete
+├── public/
+│   ├── css/style.css
+│   ├── js/main.js
+│   └── uploads/              # Featured images
+├── routes/
+│   ├── adminRoutes.js        # Semua route /admin/* dengan role middleware
+│   ├── authRoutes.js         # /auth/login (register disabled)
+│   └── publicRoutes.js       # Home, /post/:slug, /category/:slug
+├── views/
+│   ├── admin/
+│   │   ├── dashboard.ejs
+│   │   ├── posts.ejs         # Dipakai untuk All Posts & My Posts (via isMyPosts flag)
+│   │   ├── post-form.ejs
+│   │   ├── categories.ejs
+│   │   ├── category-form.ejs
+│   │   ├── user-form.ejs
+│   │   └── users.ejs         # List semua user + delete
+│   ├── pages/
+│   │   ├── home.ejs
+│   │   ├── post-detail.ejs
+│   │   ├── login.ejs
+│   │   ├── register.ejs      # Masih ada tapi redirect ke login dengan pesan disabled
+│   │   ├── 404.ejs
+│   │   └── error.ejs
+│   ├── partials/
+│   │   ├── navbar.ejs        # Public navbar (sudah role-aware untuk dropdown)
+│   │   ├── flash.ejs
+│   │   └── footer.ejs
+│   └── layout.ejs            # Tidak dipakai (semua halaman full HTML)
+├── .env.example
+├── database.sql              # Schema lengkap + seed (update terbaru sudah ada user_id & ENUM author)
+├── bacaaku-untukdevelop.txt  # File ini sendiri
+├── package.json
+└── server.js                 # Express setup, session (mysql), middleware, routes
+
+Arsitektur Pola:
+- MVC-like (Model → Controller → View)
+- Middleware berlapis (login → role)
+- Semua halaman admin adalah full HTML (tidak pakai layout engine)
+- Ownership di level controller + model (bukan hanya di view)
+- Flash message via connect-flash + res.locals
+
+================================================================================
+5. DATABASE SCHEMA (PENTING!)
+================================================================================
+
+Tabel users:
+- id, name, email, password (bcrypt), role ENUM('admin','author'), created_at, updated_at
+
+Tabel categories:
+- id, name, slug UNIQUE
+
+Tabel posts:
+- id, title, slug UNIQUE, content (LONGTEXT HTML dari Quill), featured_image, 
+  category_id (FK → categories, SET NULL), 
+  user_id (FK → users, SET NULL)  ← INI PENTING untuk ownership
+  tags, created_at, updated_at
+
+Tabel sessions:
+- Otomatis dibuat oleh express-mysql-session
+
+Migration penting yang pernah dilakukan:
+- Tambah user_id di posts + FK
+- Ubah role ENUM dari ('admin','user') → ('admin','author')
+- Sample data sudah include author + post milik author
+
+Jika database lama:
+Jalankan ALTER TABLE seperti yang ada di catatan sebelumnya.
+
+================================================================================
+6. ROLE & ACCESS CONTROL
+================================================================================
+
+- requireLogin: Semua /admin/*
+- requireAdmin: Categories, Users (list + create + delete), /admin/posts (All Posts)
+- requireAuthorOrAdmin: Posts (create, edit, delete, myposts), Dashboard
+
+Di dalam controller (postController):
+- Admin: bypass semua ownership check → bisa edit/delete SEMUA post
+- Author: strict check `post.user_id === req.session.user.id`
+  Kalau tidak cocok → redirect ke /admin/myposts + flash error
+
+Redirect logic setelah create/update/delete:
+- Author → selalu ke /admin/myposts
+- Admin → selalu ke /admin/posts (All Posts)
+
+Navbar & Sidebar:
+- Dibuat conditional berdasarkan user.role
+- Author: hanya lihat menu yang relevan + brand "Dashboard Author"
+- Admin: full menu + brand "BlogJS Admin"
+
+================================================================================
+7. CARA MENAMBAHKAN FITUR BARU (GUIDE)
+================================================================================
+
+A. Menambah halaman admin baru (misal: Manage Comments)
+   1. Buat controller method di adminController.js
+   2. Tambah route di adminRoutes.js dengan middleware yang sesuai (requireAdmin)
+   3. Buat view baru views/admin/comments.ejs (copy pattern dari users.ejs atau categories.ejs)
+   4. Update semua sidebar di file admin (dashboard, posts, post-form, categories, user-form, dll)
+      Tambahkan:
+      <a href="/admin/comments" class="list-group-item...">💬 Comments</a>
+   5. Update partials/navbar.ejs dropdown (hanya untuk admin)
+   6. Pastikan di controller ada pengecekan role jika diperlukan
+
+B. Menambah fitur untuk Author saja
+   - Gunakan requireAuthorOrAdmin di route
+   - Di controller: cek req.session.user.role === 'author' untuk logic khusus
+   - Di view: gunakan <% if (user && user.role === 'author') { %>
+   - Redirect selalu ke /admin/myposts setelah aksi
+
+C. Menambah field baru di Post (contoh: status draft/published)
+   1. ALTER TABLE posts ADD COLUMN status ENUM('draft','published') DEFAULT 'published'
+   2. Update models/Post.js (create, update, get queries)
+   3. Update post-form.ejs (tambah radio/select)
+   4. Update postController (kirim status ke create/update)
+   5. Update views yang menampilkan post (tampilkan badge status)
+   6. Update query public (hanya published)
+
+D. Menambah "Created by" (sudah dilakukan)
+   - Join users di model
+   - Tampilkan di view dengan <%= post.author_name %>
+
+================================================================================
+8. FITUR "CREATED BY" & OWNERSHIP (DETAIL TEKNIS)
+================================================================================
+
+- Setiap post menyimpan user_id (pemilik)
+- Saat create post (di postController.create):
+  const userId = req.session.user.id;
+  await Post.create({ ..., user_id: userId });
+
+- Query yang mengembalikan post harus JOIN users:
+  LEFT JOIN users u ON p.user_id = u.id
+  SELECT ..., COALESCE(u.name, 'Unknown') as author_name
+
+- Ownership check (hanya di controller, bukan di route):
+  if (req.session.user.role !== 'admin' && post.user_id !== req.session.user.id) {
+      req.flash('error', 'You can only ... your own posts');
+      return res.redirect('/admin/myposts');
+  }
+
+- Admin selalu bypass check di atas.
+
+================================================================================
+9. TIPS & BEST PRACTICES
+================================================================================
+
+- Jangan pernah percaya data dari client untuk ownership → selalu cek di server + DB.
+- Gunakan req.session.user (bukan req.user) karena pakai express-session.
+- Semua halaman admin adalah full HTML → jangan lupa include Bootstrap Icons & style.css di setiap file baru.
+- Untuk form yang pakai file upload (featured image): selalu pakai enctype="multipart/form-data"
+- Flash message: selalu pakai req.flash() + <%- include('../partials/flash') %>
+- Saat redirect setelah aksi sukses: sesuaikan tujuan berdasarkan role (my posts vs all posts)
+- Jangan hardcode /admin/posts di tempat yang bisa diakses author.
+- Saat menambah kolom baru di DB: update database.sql + berikan perintah ALTER di catatan ini.
+- Untuk testing role: buat minimal 1 admin + 1 author via /admin/users/create
+
+================================================================================
+10. DEPLOYMENT & PRODUCTION NOTES
+================================================================================
+
+- Ganti SESSION_SECRET jadi string panjang random (minimal 32 karakter)
+- Set NODE_ENV=production di .env
+- Gunakan PM2 atau Docker
+- Pastikan uploads folder writable dan backup rutin
+- Tambahkan helmet.js + rate-limit di production
+- Jangan expose database credential
+- Untuk production, pertimbangkan:
+  - Memindahkan uploads ke object storage (S3, dll)
+  - Menambahkan soft-delete untuk post & user
+  - Menambahkan audit log (siapa yang hapus/edit apa)
+
+================================================================================
+11. KNOWN ISSUES / TODO YANG MUNGKIN DIBUTUHKAN
+================================================================================
+
+- Belum ada fitur "Edit User" (hanya create + delete)
+- Belum ada soft delete
+- Belum ada search post (bisa pakai FULLTEXT index yang sudah ada di schema)
+- Belum ada pagination di halaman All Users
+- Belum ada "My Profile" atau change password untuk user
+- Post lama yang user_id-nya NULL akan dianggap milik admin (lihat migration)
+- Fallback di model Post (getAllForAdmin, create, dll) hanya untuk development saat kolom user_id belum ada
+- Navbar di halaman public tetap "BlogJS" (bukan berubah untuk author) → ini disengaja
+
+================================================================================
+12. CARA DEBUGGING
+================================================================================
+
+- Error di dashboard / create post → cek console (banyak flash message hanya wrapper)
+- Ownership tidak bekerja → pastikan post.user_id terisi & perbandingan id bertipe number (pakai parseInt jika perlu)
+- User tidak bisa login setelah create → pastikan password di-hash di model
+- Role tidak tersimpan → cek form select name="role" dan controller finalRole
+- "Unknown column 'p.user_id'" → jalankan ALTER TABLE (lihat bagian 3)
+
+================================================================================
+13. RINGKASAN PERINTAH PENTING
+================================================================================
+
+npm run dev
+mysql -u root -p db_blogjs < database.sql
+ALTER TABLE ... (lihat bagian 11 & 3)
+npm start
+
+================================================================================
+SELESAI
+================================================================================
+
+File ini dibuat agar siapa saja yang melanjutkan development BlogJS bisa paham 
+arsitektur, role logic, dan cara menambah fitur dengan cepat tanpa harus 
+membaca seluruh history chat.
+
+Selamat mengembangkan!
+
+================================================================================

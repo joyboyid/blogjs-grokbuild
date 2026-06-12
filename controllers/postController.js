@@ -43,7 +43,7 @@ const postController = {
     },
 
     // =====================================================
-    // ADMIN - LIST ALL POSTS
+    // ADMIN - LIST ALL POSTS (for admins)
     // =====================================================
     async adminList(req, res) {
         try {
@@ -51,14 +51,38 @@ const postController = {
             const categories = await Category.getAll();
 
             res.render('admin/posts', {
-                title: 'Manage Posts - Admin',
+                title: 'All Posts - Admin',
                 posts,
                 categories,
-
+                isMyPosts: false,
+                user: req.session.user || null
             });
         } catch (err) {
             console.error(err);
             req.flash('error', 'Failed to load posts.');
+            res.redirect('/admin/dashboard');
+        }
+    },
+
+    // =====================================================
+    // AUTHOR - MY POSTS (only own posts)
+    // =====================================================
+    async myPostsList(req, res) {
+        try {
+            const userId = req.session.user.id;
+            const posts = await Post.getByUserId(userId);
+            const categories = await Category.getAll();
+
+            res.render('admin/posts', {
+                title: 'My Posts',
+                posts,
+                categories,
+                isMyPosts: true,
+                user: req.session.user || null
+            });
+        } catch (err) {
+            console.error(err);
+            req.flash('error', 'Failed to load your posts.');
             res.redirect('/admin/dashboard');
         }
     },
@@ -74,7 +98,7 @@ const postController = {
             categories,
             errors: [],
             oldInput: {},
-            layout: 'admin/layout'
+            user: req.session.user || null
         });
     },
 
@@ -94,12 +118,13 @@ const postController = {
                     categories,
                     errors: errors.array(),
                     oldInput: req.body,
-    
+                    user: req.session.user || null
                 });
             }
 
             try {
                 const { title, content, category_id, tags } = req.body;
+                const userId = req.session.user.id;
 
                 // Handle featured image (uploaded by multer)
                 let featured_image = null;
@@ -107,17 +132,20 @@ const postController = {
                     featured_image = `/uploads/${req.file.filename}`;
                 }
 
-                // Check slug uniqueness (auto-generated in model)
+                // Create with owner
                 await Post.create({
                     title,
                     content,
                     featured_image,
                     category_id: category_id || null,
-                    tags: tags || null
+                    tags: tags || null,
+                    user_id: userId
                 });
 
                 req.flash('success', 'Post created successfully!');
-                res.redirect('/admin/posts');
+                // Redirect authors to myposts, admins to all posts
+                const redirectTo = req.session.user.role === 'author' ? '/admin/myposts' : '/admin/posts';
+                res.redirect(redirectTo);
             } catch (err) {
                 console.error('Create post error:', err);
                 req.flash('error', 'Failed to create post.');
@@ -134,7 +162,14 @@ const postController = {
             const post = await Post.findById(req.params.id);
             if (!post) {
                 req.flash('error', 'Post not found.');
-                return res.redirect('/admin/posts');
+                const redirectTo = req.session.user.role === 'author' ? '/admin/myposts' : '/admin/posts';
+                return res.redirect(redirectTo);
+            }
+
+            // Admins can edit any post. Authors can only edit their own.
+            if (req.session.user.role !== 'admin' && post.user_id !== req.session.user.id) {
+                req.flash('error', 'You can only edit your own posts.');
+                return res.redirect('/admin/myposts');
             }
 
             const categories = await Category.getAll();
@@ -145,12 +180,14 @@ const postController = {
                 categories,
                 errors: [],
                 oldInput: post,
+                user: req.session.user || null
 
             });
         } catch (err) {
             console.error(err);
             req.flash('error', 'Failed to load post.');
-            res.redirect('/admin/posts');
+            const redirectTo = req.session.user.role === 'author' ? '/admin/myposts' : '/admin/posts';
+            res.redirect(redirectTo);
         }
     },
 
@@ -172,7 +209,7 @@ const postController = {
                     categories,
                     errors: errors.array(),
                     oldInput: req.body,
-    
+                    user: req.session.user || null
                 });
             }
 
@@ -182,7 +219,14 @@ const postController = {
 
                 if (!existingPost) {
                     req.flash('error', 'Post not found.');
-                    return res.redirect('/admin/posts');
+                    const redirectTo = req.session.user.role === 'author' ? '/admin/myposts' : '/admin/posts';
+                    return res.redirect(redirectTo);
+                }
+
+                // Admins can edit any post. Authors can only edit their own.
+                if (req.session.user.role !== 'admin' && existingPost.user_id !== req.session.user.id) {
+                    req.flash('error', 'You can only edit your own posts.');
+                    return res.redirect('/admin/myposts');
                 }
 
                 let featured_image = null;
@@ -204,7 +248,8 @@ const postController = {
                 });
 
                 req.flash('success', 'Post updated successfully!');
-                res.redirect('/admin/posts');
+                const redirectTo = req.session.user.role === 'author' ? '/admin/myposts' : '/admin/posts';
+                res.redirect(redirectTo);
             } catch (err) {
                 console.error('Update post error:', err);
                 req.flash('error', 'Failed to update post.');
@@ -219,7 +264,19 @@ const postController = {
     async delete(req, res) {
         try {
             const post = await Post.findById(req.params.id);
-            if (post && post.featured_image) {
+            if (!post) {
+                req.flash('error', 'Post not found.');
+                const redirectTo = req.session.user.role === 'author' ? '/admin/myposts' : '/admin/posts';
+                return res.redirect(redirectTo);
+            }
+
+            // Admins can delete any post. Authors can only delete their own.
+            if (req.session.user.role !== 'admin' && post.user_id !== req.session.user.id) {
+                req.flash('error', 'You can only delete your own posts.');
+                return res.redirect('/admin/myposts');
+            }
+
+            if (post.featured_image) {
                 const imagePath = path.join(__dirname, '..', 'public', post.featured_image);
                 if (fs.existsSync(imagePath)) {
                     fs.unlinkSync(imagePath);
@@ -232,7 +289,9 @@ const postController = {
             console.error('Delete post error:', err);
             req.flash('error', 'Failed to delete post.');
         }
-        res.redirect('/admin/posts');
+
+        const redirectTo = req.session.user.role === 'author' ? '/admin/myposts' : '/admin/posts';
+        res.redirect(redirectTo);
     }
 };
 

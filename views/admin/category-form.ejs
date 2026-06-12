@@ -14,7 +14,7 @@
         <div class="container-fluid">
             <a class="navbar-brand fw-bold d-flex align-items-center gap-2" href="/admin/dashboard">
                 <i class="bi bi-speedometer2"></i>
-                <span>BlogJS Admin</span>
+                <span><%= (user && user.role === 'author') ? 'Dashboard Author' : 'BlogJS Admin' %></span>
             </a>
             <div class="d-flex align-items-center gap-2">
                 <a href="/" class="btn btn-outline-light btn-sm d-flex align-items-center gap-1" target="_blank">
@@ -32,8 +32,13 @@
             <div class="col-md-2 px-0 bg-light border-end min-vh-100">
                 <div class="list-group list-group-flush">
                     <a href="/admin/dashboard" class="list-group-item list-group-item-action">📊 Dashboard</a>
-                    <a href="/admin/posts" class="list-group-item list-group-item-action">📝 Posts</a>
+                    <a href="/admin/posts" class="list-group-item list-group-item-action">📝 All Posts</a>
                     <a href="/admin/categories" class="list-group-item list-group-item-action active">📁 Categories</a>
+                    <a href="/admin/categories/create" class="list-group-item list-group-item-action">+ New Category</a>
+                    <% if (user && user.role === 'admin') { %>
+                        <a href="/admin/users" class="list-group-item list-group-item-action">👥 All Users</a>
+                        <a href="/admin/users/create" class="list-group-item list-group-item-action">+ Create User</a>
+                    <% } %>
                 </div>
             </div>
 

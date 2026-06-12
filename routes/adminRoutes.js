@@ -7,7 +7,7 @@ const express = require('express');
 const router = express.Router();
 const multer = require('multer');
 const path = require('path');
-const { requireLogin } = require('../middleware/auth');
+const { requireLogin, requireAdmin, requireAuthorOrAdmin } = require('../middleware/auth');
 const adminController = require('../controllers/adminController');
 const postController = require('../controllers/postController');
 const categoryController = require('../controllers/categoryController');
@@ -45,25 +45,33 @@ const upload = multer({
 // All routes below require login
 router.use(requireLogin);
 
-// Dashboard
+// Dashboard - accessible by both admin and author
 router.get('/dashboard', adminController.dashboard);
 
 // Posts management
-router.get('/posts', postController.adminList);
-router.get('/posts/create', postController.showCreateForm);
+// /admin/posts = all posts (admin only)
+// /admin/myposts = own posts (author + admin)
+router.get('/posts', requireAdmin, postController.adminList);
+router.get('/myposts', requireAuthorOrAdmin, postController.myPostsList);
 
-// Multer upload for create and update (featured image)
-router.post('/posts/create', upload.single('featured_image'), postController.create);
-router.get('/posts/:id/edit', postController.showEditForm);
-router.post('/posts/:id/update', upload.single('featured_image'), postController.update);
-router.post('/posts/:id/delete', postController.delete);
+router.get('/posts/create', requireAuthorOrAdmin, postController.showCreateForm);
+router.post('/posts/create', requireAuthorOrAdmin, upload.single('featured_image'), postController.create);
+router.get('/posts/:id/edit', requireAuthorOrAdmin, postController.showEditForm);
+router.post('/posts/:id/update', requireAuthorOrAdmin, upload.single('featured_image'), postController.update);
+router.post('/posts/:id/delete', requireAuthorOrAdmin, postController.delete);
 
-// Categories management
-router.get('/categories', categoryController.adminList);
-router.get('/categories/create', categoryController.showCreateForm);
-router.post('/categories/create', categoryController.create);
-router.get('/categories/:id/edit', categoryController.showEditForm);
-router.post('/categories/:id/update', categoryController.update);
-router.post('/categories/:id/delete', categoryController.delete);
+// Categories management - admin only
+router.get('/categories', requireAdmin, categoryController.adminList);
+router.get('/categories/create', requireAdmin, categoryController.showCreateForm);
+router.post('/categories/create', requireAdmin, categoryController.create);
+router.get('/categories/:id/edit', requireAdmin, categoryController.showEditForm);
+router.post('/categories/:id/update', requireAdmin, categoryController.update);
+router.post('/categories/:id/delete', requireAdmin, categoryController.delete);
+
+// Admin User Management - admin only
+router.get('/users', requireAdmin, adminController.usersList);
+router.get('/users/create', requireAdmin, adminController.showCreateUserForm);
+router.post('/users/create', requireAdmin, adminController.createUser);
+router.post('/users/:id/delete', requireAdmin, adminController.deleteUser);
 
 module.exports = router;

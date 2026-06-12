@@ -14,7 +14,7 @@
         <div class="container-fluid">
             <a class="navbar-brand fw-bold d-flex align-items-center gap-2" href="/admin/dashboard">
                 <i class="bi bi-speedometer2"></i>
-                <span>BlogJS Admin</span>
+                <span><%= (user && user.role === 'author') ? 'Dashboard Author' : 'BlogJS Admin' %></span>
             </a>
             <div class="d-flex align-items-center gap-2">
                 <span class="text-light small me-2 d-none d-lg-block opacity-75">Hi, <%= user ? user.name.split(' ')[0] : '' %></span>
@@ -33,10 +33,18 @@
             <div class="col-md-2 col-lg-2 px-0 bg-light border-end min-vh-100">
                 <div class="list-group list-group-flush">
                     <a href="/admin/dashboard" class="list-group-item list-group-item-action active">📊 Dashboard</a>
-                    <a href="/admin/posts" class="list-group-item list-group-item-action">📝 Posts</a>
+                    <% if (userRole === 'admin') { %>
+                        <a href="/admin/posts" class="list-group-item list-group-item-action">📝 All Posts</a>
+                    <% } else { %>
+                        <a href="/admin/myposts" class="list-group-item list-group-item-action">📝 My Posts</a>
+                    <% } %>
                     <a href="/admin/posts/create" class="list-group-item list-group-item-action">+ New Post</a>
-                    <a href="/admin/categories" class="list-group-item list-group-item-action">📁 Categories</a>
-                    <a href="/admin/categories/create" class="list-group-item list-group-item-action">+ New Category</a>
+                    <% if (userRole === 'admin') { %>
+                        <a href="/admin/categories" class="list-group-item list-group-item-action">📁 Categories</a>
+                        <a href="/admin/categories/create" class="list-group-item list-group-item-action">+ New Category</a>
+                        <a href="/admin/users" class="list-group-item list-group-item-action">👥 All Users</a>
+                        <a href="/admin/users/create" class="list-group-item list-group-item-action">+ Create User</a>
+                    <% } %>
                 </div>
             </div>
 
@@ -54,6 +62,7 @@
                             </div>
                         </div>
                     </div>
+                    <% if (userRole === 'admin') { %>
                     <div class="col-md-4">
                         <div class="card shadow-sm">
                             <div class="card-body">
@@ -68,9 +77,21 @@
                                 <h6 class="text-muted">Quick Actions</h6>
                                 <a href="/admin/posts/create" class="btn btn-sm btn-primary">New Post</a>
                                 <a href="/admin/categories/create" class="btn btn-sm btn-outline-secondary">New Category</a>
+                                <a href="/admin/users/create" class="btn btn-sm btn-outline-primary ms-1">New User</a>
                             </div>
                         </div>
                     </div>
+                    <% } else { %>
+                    <div class="col-md-4">
+                        <div class="card shadow-sm">
+                            <div class="card-body">
+                                <h6 class="text-muted">Quick Actions</h6>
+                                <a href="/admin/posts/create" class="btn btn-sm btn-primary">New Post</a>
+                                <a href="/admin/myposts" class="btn btn-sm btn-outline-secondary">My Posts</a>
+                            </div>
+                        </div>
+                    </div>
+                    <% } %>
                 </div>
 
                 <h5 class="mb-3">Recent Posts</h5>
@@ -80,6 +101,7 @@
                             <thead>
                                 <tr>
                                     <th>Title</th>
+                                    <th>Created by</th>
                                     <th>Category</th>
                                     <th>Date</th>
                                     <th></th>
@@ -89,6 +111,7 @@
                                 <% stats.recentPosts.forEach(p => { %>
                                     <tr>
                                         <td><a href="/post/<%= p.slug %>" target="_blank"><%= p.title %></a></td>
+                                        <td><span class="badge bg-light text-dark"><%= p.author_name || 'Unknown' %></span></td>
                                         <td><span class="badge bg-light text-dark"><%= p.category_name || 'Uncategorized' %></span></td>
                                         <td class="text-muted small"><%= new Date(p.created_at).toLocaleDateString() %></td>
                                         <td class="text-end">

@@ -59,12 +59,20 @@
                             <li><a class="dropdown-item d-flex align-items-center gap-2 py-2" href="/admin/dashboard">
                                 <i class="bi bi-speedometer2"></i> Dashboard
                             </a></li>
-                            <li><a class="dropdown-item d-flex align-items-center gap-2 py-2" href="/admin/posts">
-                                <i class="bi bi-file-earmark-text"></i> Manage Posts
+                            <li><a class="dropdown-item d-flex align-items-center gap-2 py-2" href="<%= user.role === 'author' ? '/admin/myposts' : '/admin/posts' %>">
+                                <i class="bi bi-file-earmark-text"></i> <%= user.role === 'author' ? 'My Posts' : 'Manage Posts' %>
                             </a></li>
-                            <li><a class="dropdown-item d-flex align-items-center gap-2 py-2" href="/admin/categories">
-                                <i class="bi bi-folder"></i> Categories
-                            </a></li>
+                            <% if (user.role === 'admin') { %>
+                                <li><a class="dropdown-item d-flex align-items-center gap-2 py-2" href="/admin/categories">
+                                    <i class="bi bi-folder"></i> Categories
+                                </a></li>
+                                <li><a class="dropdown-item d-flex align-items-center gap-2 py-2" href="/admin/users">
+                                    <i class="bi bi-people"></i> All Users
+                                </a></li>
+                                <li><a class="dropdown-item d-flex align-items-center gap-2 py-2" href="/admin/users/create">
+                                    <i class="bi bi-person-plus"></i> Create User
+                                </a></li>
+                            <% } %>
                             <li><hr class="dropdown-divider"></li>
                             <li><a class="dropdown-item d-flex align-items-center gap-2 py-2 text-danger" href="/auth/logout">
                                 <i class="bi bi-box-arrow-right"></i> Logout

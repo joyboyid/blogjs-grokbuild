@@ -61,6 +61,9 @@
                                 <span class="badge bg-light text-dark me-1">#<%= tag.trim() %></span>
                             <% }) %>
                         <% } %>
+
+                        <span class="mx-2">•</span>
+                        <span>Created by: <strong><%= post.author_name || 'Unknown' %></strong></span>
                     </div>
 
                     <!-- Rich HTML Content from Quill.js editor -->

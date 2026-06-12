@@ -80,6 +80,14 @@ class User {
         );
         return true;
     }
+
+    /**
+     * Delete user (admin only, careful not to delete self)
+     */
+    static async delete(id) {
+        await pool.execute('DELETE FROM users WHERE id = ?', [id]);
+        return true;
+    }
 }
 
 module.exports = User;
