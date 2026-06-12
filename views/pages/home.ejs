@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="<%= currentCategory ? currentCategory.name + ' articles on BlogJS' : 'Latest articles and tutorials on BlogJS' %>">
+    <title><%= title || 'BlogJS' %></title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <%- include('../partials/navbar') %>
+
+    <main class="container py-4">
+        <%- include('../partials/flash') %>
+
+        <div class="row">
+            <!-- Main Content -->
+            <div class="col-lg-8">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h1 class="h3 mb-0">
+                        <% if (currentCategory) { %>
+                            📁 <%= currentCategory.name %>
+                        <% } else { %>
+                            Latest Posts
+                        <% } %>
+                    </h1>
+                    
+                    <% if (user && user.role === 'admin') { %>
+                        <a href="/admin/posts/create" class="btn btn-primary btn-sm">+ New Post</a>
+                    <% } %>
+                </div>
+
+                <% if (posts && posts.length > 0) { %>
+                    <div class="row g-4">
+                        <% posts.forEach(post => { %>
+                            <div class="col-md-6">
+                                <div class="card h-100 shadow-sm">
+                                    <% if (post.featured_image) { %>
+                                        <img src="<%= post.featured_image %>" class="card-img-top" alt="<%= post.title %>" style="height: 180px; object-fit: cover;">
+                                    <% } else { %>
+                                        <div class="card-img-top bg-light d-flex align-items-center justify-content-center" style="height: 180px;">
+                                            <span class="text-muted">No image</span>
+                                        </div>
+                                    <% } %>
+                                    
+                                    <div class="card-body d-flex flex-column">
+                                        <% if (post.category_name) { %>
+                                            <a href="/category/<%= post.category_slug %>" class="badge bg-secondary text-decoration-none mb-2 align-self-start">
+                                                <%= post.category_name %>
+                                            </a>
+                                        <% } %>
+                                        
+                                        <h5 class="card-title">
+                                            <a href="/post/<%= post.slug %>" class="text-dark text-decoration-none">
+                                                <%= post.title %>
+                                            </a>
+                                        </h5>
+                                        
+                                        <p class="card-text text-muted small flex-grow-1">
+                                            <%= post.content.replace(/<[^>]+>/g, '').substring(0, 120) %>...
+                                        </p>
+                                        
+                                        <div class="d-flex justify-content-between align-items-center mt-auto">
+                                            <small class="text-muted">
+                                                <%= new Date(post.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) %>
+                                            </small>
+                                            <a href="/post/<%= post.slug %>" class="btn btn-sm btn-outline-primary">Read more →</a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        <% }) %>
+                    </div>
+
+                    <!-- Pagination -->
+                    <% if (pagination && pagination.totalPages > 1) { %>
+                        <nav class="mt-5">
+                            <ul class="pagination justify-content-center">
+                                <% if (pagination.hasPrev) { %>
+                                    <li class="page-item">
+                                        <a class="page-link" href="?page=<%= pagination.current - 1 %>">Previous</a>
+                                    </li>
+                                <% } %>
+                                
+                                <% for(let i = 1; i <= pagination.totalPages; i++) { %>
+                                    <li class="page-item <%= i === pagination.current ? 'active' : '' %>">
+                                        <a class="page-link" href="?page=<%= i %>"><%= i %></a>
+                                    </li>
+                                <% } %>
+                                
+                                <% if (pagination.hasNext) { %>
+                                    <li class="page-item">
+                                        <a class="page-link" href="?page=<%= pagination.current + 1 %>">Next</a>
+                                    </li>
+                                <% } %>
+                            </ul>
+                        </nav>
+                    <% } %>
+
+                <% } else { %>
+                    <div class="text-center py-5">
+                        <h4 class="text-muted">No posts yet</h4>
+                        <p class="text-muted">Check back later or <a href="/admin/posts/create">create your first post</a>.</p>
+                    </div>
+                <% } %>
+            </div>
+
+            <!-- Sidebar -->
+            <div class="col-lg-4 mt-4 mt-lg-0">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-white">
+                        <strong>Categories</strong>
+                    </div>
+                    <div class="list-group list-group-flush">
+                        <a href="/" class="list-group-item list-group-item-action <%= !currentCategory ? 'active' : '' %>">
+                            All Posts
+                        </a>
+                        <% categories.forEach(cat => { %>
+                            <a href="/category/<%= cat.slug %>" 
+                               class="list-group-item list-group-item-action <%= (currentCategory && currentCategory.slug === cat.slug) ? 'active' : '' %>">
+                                <%= cat.name %>
+                            </a>
+                        <% }) %>
+                    </div>
+                </div>
+
+                <div class="card mt-4 shadow-sm">
+                    <div class="card-body small text-muted">
+                        <strong>About BlogJS</strong><br>
+                        A clean, modern blog platform built with Node.js, Express, MariaDB, EJS and Bootstrap 5.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <%- include('../partials/footer') %>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

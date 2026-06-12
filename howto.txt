@@ -1,0 +1,228 @@
+================================================================================
+                        BLOGJS - HOW TO & IMPORTANT NOTES
+                              (Post-Creation Notes)
+================================================================================
+
+Tanggal pembuatan: 2026-06-12
+Project: BlogJS - Node.js + Express + MariaDB Blog Application
+
+================================================================================
+1. PACKAGE DECISIONS & DEVIATIONS FROM ORIGINAL REQUEST
+================================================================================
+
+- "connect-mariadb-session" 
+  → Tidak digunakan. Package yang benar dan paling stabil untuk mysql2 + 
+    MariaDB adalah "express-mysql-session" (v3+).
+  → Ini sudah teruji dengan baik, mendukung Promise, dan secara otomatis 
+    membuat tabel `sessions`.
+  → Di server.js sudah dikonfigurasi dengan benar.
+
+- express-ejs-layouts
+  → Sengaja tidak ditambahkan untuk menjaga dependencies tetap minimal 
+    sesuai permintaan user.
+  → Akibatnya: Halaman admin (dashboard, post-form, dll) dibuat sebagai 
+    full HTML standalone dengan navbar + sidebar yang di-duplicate.
+  → Halaman public juga full HTML (home, post-detail, login, register).
+  → Ini membuat kode sedikit lebih verbose tapi tidak menambah dependency.
+
+- slugify
+  → Ditambahkan karena sangat berguna untuk generate slug otomatis 
+    (title → slug). User tidak menyebutkan tapi sangat diperlukan.
+
+- connect-flash
+  → Ditambahkan untuk flash messages yang clean (lebih baik daripada 
+    manual session flash).
+
+================================================================================
+2. DATABASE & SEEDING
+================================================================================
+
+- File: database.sql
+- Default admin yang di-seed:
+    Email    : admin@blogjs.local
+    Password : admin123
+
+  CATATAN PENTING:
+  → Segera ganti password setelah login pertama!
+  → Cara ganti password setelah login:
+      1. Login sebagai admin
+      2. (Saat ini belum ada halaman ganti password — bisa dibuat nanti)
+      3. Atau langsung update di database:
+         UPDATE users 
+         SET password = '$2a$10$...'   -- (generate hash baru dengan bcrypt)
+         WHERE email = 'admin@blogjs.local';
+
+  → Jika kamu sudah import database.sql sebelumnya dengan hash yang salah,
+    jalankan perintah ini di MySQL:
+
+    USE db_blogjs;
+    UPDATE users 
+    SET password = '$2a$10$d6UmURQHV/M7M2YLion0e.SO4rWDfL5DyEqqZMk7gRgCwXlMX/BKi' 
+    WHERE email = 'admin@blogjs.local';
+
+    Lalu restart server Node.js.
+
+- Setelah import database.sql, tabel `sessions` akan dibuat otomatis 
+  oleh express-mysql-session saat pertama kali aplikasi jalan.
+
+- Foreign Key di posts.category_id = ON DELETE SET NULL (post tetap ada 
+  meski category dihapus).
+
+================================================================================
+3. RICH TEXT EDITOR (QUILL.JS)
+================================================================================
+
+- Sekarang menggunakan **Quill.js** (versi 1.3.7 via CDN)
+- Benar-benar GRATIS, tidak perlu API key, tidak perlu registrasi, 
+  tidak ada branding paksaan.
+- CDN resmi: https://cdn.quilljs.com/
+- Keunggulan: Ringan, modern, mudah dikustomisasi, output HTML bersih.
+- Toolbar sudah dikonfigurasi dengan heading, bold/italic, list, link, blockquote, code, color, dll.
+
+Tidak ada lagi masalah "no-api-key" seperti TinyMCE sebelumnya.
+
+================================================================================
+4. FILE UPLOAD (MULTER)
+================================================================================
+
+- Lokasi upload: public/uploads/
+- Nama file: post-<timestamp>-<random><ext>
+- Limit: 5MB
+- Hanya menerima: jpeg, jpg, png, gif, webp
+- Saat update post:
+  → Jika upload gambar baru, gambar lama otomatis dihapus (lihat postController).
+- public/uploads/ di-ignore oleh .gitignore (kecuali .gitkeep).
+
+================================================================================
+5. SESSION & AUTHENTICATION
+================================================================================
+
+- Session disimpan di tabel `sessions` di MariaDB (bukan memory).
+- Cookie name: blogjs_sid
+- Max age: 1 hari
+- httpOnly: true
+- secure: hanya aktif kalau NODE_ENV=production
+
+- Middleware proteksi:
+  → requireLogin (middleware/auth.js)
+  → Semua route di /admin dilindungi.
+
+- User disimpan di req.session.user (tanpa password).
+
+================================================================================
+6. CARA MENJALANKAN (QUICK REFERENCE)
+================================================================================
+
+cd /home/shiroe/project/grok-app/blogjs
+
+npm install
+
+# Setup database
+mysql -u root -p -e "CREATE DATABASE IF NOT EXISTS db_blogjs ..."
+mysql -u root -p db_blogjs < database.sql
+
+cp .env.example .env
+# Edit .env → isi DB_PASSWORD dan SESSION_SECRET yang kuat
+
+npm run dev     # development (nodemon)
+# atau
+npm start       # production
+
+Akses:
+- Public  : http://localhost:3000
+- Login   : http://localhost:3000/auth/login
+
+================================================================================
+7. PRODUCTION RECOMMENDATIONS
+================================================================================
+
+WAJIB:
+- Ganti SESSION_SECRET jadi string panjang random (minimal 32 karakter)
+- Set NODE_ENV=production
+- Ganti password admin default
+- (Editor sekarang Quill.js - tidak perlu API key)
+
+SANGAT DIREKOMENDASIKAN:
+- Install helmet.js (security headers)
+- Tambah express-rate-limit di auth routes
+- Gunakan PM2 atau Docker untuk production
+- Backup database secara rutin
+- Serve static files via Nginx / CDN untuk uploads
+- Aktifkan HTTPS + secure cookie
+- Tambah logging (morgan atau winston)
+- Buat halaman "Change Password" di admin
+
+================================================================================
+8. TROUBLESHOOTING UMUM
+================================================================================
+
+Error "Failed to connect to MariaDB":
+→ Pastikan MariaDB running
+→ Cek DB_HOST, DB_USER, DB_PASSWORD di .env
+→ Pastikan user punya akses ke database db_blogjs
+
+Error "ER_NO_SUCH_TABLE: sessions":
+→ Aplikasi akan otomatis membuatnya. Restart server sekali lagi.
+
+Gambar tidak muncul:
+→ Pastikan folder public/uploads bisa di-write
+→ Cek permission folder
+
+Quill editor tidak muncul:
+→ Cek koneksi internet (CDN quilljs.com)
+→ Pastikan tidak ada error di console browser (F12)
+
+Form validation error tidak muncul:
+→ Sudah pakai express-validator di controller. Cek apakah 
+  validationResult dipanggil dengan benar.
+
+================================================================================
+9. CATATAN TEKNIS LAINNYA
+================================================================================
+
+- Semua model menggunakan pool.execute() (mysql2 Promise).
+- Tidak ada raw SQL di route/controller — semua lewat model.
+- Slug generation: otomatis dari title jika tidak diisi manual.
+- Pagination: 6 post per halaman (bisa diubah di controller).
+- Content post disimpan sebagai HTML mentah (dari Quill.js editor).
+- Meta description di post-detail di-generate sederhana dari content.
+
+- Di adminRoutes.js, multer dikonfigurasi langsung di route file 
+  (bukan di middleware terpisah) agar mudah dibaca.
+
+- Flash messages menggunakan connect-flash + middleware/flash.js
+  yang memasukkan ke res.locals.
+
+================================================================================
+10. YANG BISA DITAMBAHKAN DI MASA DEPAN (BONUS IDEAS)
+================================================================================
+
+- Fitur search post (menggunakan FULLTEXT index yang sudah ada)
+- Multiple admin / role management
+- Comment system
+- Like / view counter
+- Draft vs Published status
+- Image upload langsung dari editor (saat ini hanya featured image via form upload)
+- Soft delete untuk post
+- API endpoint (REST) untuk frontend terpisah (React/Vue)
+- Pagination yang lebih baik dengan page numbers yang pintar
+- Dark mode toggle
+- RSS feed
+- Sitemap.xml generator
+
+================================================================================
+11. RINGKASAN YANG HARUS DIINGAT
+================================================================================
+
+✓ Database name WAJIB: db_blogjs
+✓ Jangan lupa import database.sql
+✓ Ganti password admin secepatnya
+✓ Gunakan SESSION_SECRET yang kuat di production
+✓ Quill.js 100% gratis tanpa API key (tidak perlu khawatir production)
+✓ Uploads ada di public/uploads/
+✓ Semua route admin dilindungi middleware
+✓ Kode sudah menggunakan async/await + clean structure
+
+================================================================================
+                              END OF HOWTO.TXT
+================================================================================
