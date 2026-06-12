@@ -1,47 +1,78 @@
-<nav class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top">
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top navbar-modern">
     <div class="container">
-        <a class="navbar-brand fw-bold" href="/">BlogJS</a>
+        <!-- Brand with icon -->
+        <a class="navbar-brand fw-bold d-flex align-items-center gap-2" href="/">
+            <i class="bi bi-journal-text fs-4"></i>
+            <span>BlogJS</span>
+        </a>
         
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+        <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
             <span class="navbar-toggler-icon"></span>
         </button>
         
         <div class="collapse navbar-collapse" id="navbarNav">
+            <!-- Main Navigation -->
             <ul class="navbar-nav me-auto">
                 <li class="nav-item">
-                    <a class="nav-link <%= currentPath === '/' ? 'active' : '' %>" href="/">Home</a>
+                    <a class="nav-link d-flex align-items-center gap-1 <%= currentPath === '/' ? 'active' : '' %>" href="/">
+                        <i class="bi bi-house-door"></i>
+                        <span>Home</span>
+                    </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link <%= currentPath === '/about' ? 'active' : '' %>" href="/about">About</a>
+                    <a class="nav-link d-flex align-items-center gap-1 <%= currentPath === '/about' ? 'active' : '' %>" href="/about">
+                        <i class="bi bi-info-circle"></i>
+                        <span>About</span>
+                    </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link <%= currentPath === '/contact' ? 'active' : '' %>" href="/contact">Contact Us</a>
+                    <a class="nav-link d-flex align-items-center gap-1 <%= currentPath === '/contact' ? 'active' : '' %>" href="/contact">
+                        <i class="bi bi-envelope"></i>
+                        <span>Contact</span>
+                    </a>
                 </li>
             </ul>
             
-            <ul class="navbar-nav">
-                <% if (user) { %>
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
-                            👋 <%= user.name %>
+            <!-- Right Side Actions (only visible when logged in) -->
+            <% if (user) { %>
+                <ul class="navbar-nav align-items-center gap-1">
+                    <!-- Quick action for logged in admins -->
+                    <li class="nav-item d-none d-lg-block">
+                        <a href="/admin/posts/create" class="btn btn-primary btn-sm d-flex align-items-center gap-1">
+                            <i class="bi bi-plus-lg"></i>
+                            <span>Write Post</span>
                         </a>
-                        <ul class="dropdown-menu dropdown-menu-end">
-                            <li><a class="dropdown-item" href="/admin/dashboard">Dashboard</a></li>
-                            <li><a class="dropdown-item" href="/admin/posts">Manage Posts</a></li>
-                            <li><a class="dropdown-item" href="/admin/categories">Categories</a></li>
+                    </li>
+                    
+                    <!-- User Dropdown -->
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle d-flex align-items-center gap-2 px-3 py-2 rounded-pill bg-dark bg-opacity-50" 
+                           href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="bi bi-person-circle fs-5"></i>
+                            <span class="d-none d-md-inline fw-medium"><%= user.name.split(' ')[0] %></span>
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 mt-2" style="min-width: 200px;">
+                            <li class="px-3 py-2 border-bottom">
+                                <div class="fw-semibold"><%= user.name %></div>
+                                <small class="text-muted"><%= user.email %></small>
+                            </li>
+                            <li><a class="dropdown-item d-flex align-items-center gap-2 py-2" href="/admin/dashboard">
+                                <i class="bi bi-speedometer2"></i> Dashboard
+                            </a></li>
+                            <li><a class="dropdown-item d-flex align-items-center gap-2 py-2" href="/admin/posts">
+                                <i class="bi bi-file-earmark-text"></i> Manage Posts
+                            </a></li>
+                            <li><a class="dropdown-item d-flex align-items-center gap-2 py-2" href="/admin/categories">
+                                <i class="bi bi-folder"></i> Categories
+                            </a></li>
                             <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item text-danger" href="/auth/logout">Logout</a></li>
+                            <li><a class="dropdown-item d-flex align-items-center gap-2 py-2 text-danger" href="/auth/logout">
+                                <i class="bi bi-box-arrow-right"></i> Logout
+                            </a></li>
                         </ul>
                     </li>
-                <% } else { %>
-                    <li class="nav-item">
-                        <a class="nav-link" href="/auth/login">Login</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="btn btn-outline-light btn-sm ms-2" href="/auth/register">Register</a>
-                    </li>
-                <% } %>
-            </ul>
+                </ul>
+            <% } %>
         </div>
     </div>
 </nav>
